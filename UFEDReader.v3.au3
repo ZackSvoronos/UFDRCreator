@@ -64,12 +64,6 @@ Func WaitUntilFinished()
    WEnd
 EndFunc
 
-Func WindowNav()
-   While ProcessExists('UFEDPhysicalAnalyzer.exe')
-	  CloseWindows()
-   WEnd
-EndFunc
-
 ;Func UFEDReader()
    ;$FilePath = 'C:\Users\Zack\Documents\My UFED Extractions'
    ;Local $ufdsInDirectory = _FileListToArrayRec($FilePath, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
@@ -83,40 +77,8 @@ EndFunc
    ;WEnd
 ;EndFunc
 
-Func CloseWindows()
-   If WinExists('Open') Then
-	  WinActivate('Open')
-	  Send('{TAB 4}')
-	  Send('{ENTER}')
-   EndIf
 
-   ;If WinExists('UFED Physical Analyzer 6.2.0.79') Then
-	  ;WinActivate('UFED Physical Analyzer 6.2.0.79')
-   ;EndIf
-
-   If WinExists('New version is available') Then
-	  WinClose('New version is available')
-   EndIf
-
-   If WinExists('Did you know…') Then
-	  WinClose('Did you know…')
-   EndIf
-
-   If WinExists('Recover additional location data: Time-limited free service') Then
-	  WinClose('Recover additional location data: Time-limited free service')
-   EndIf
-
-   If WinExists('Device time zone detected') Then
-	  WinClose('Device time zone detected')
-   EndIf
-
-   If WinExists('Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service') Then
-	  WinClose('Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service')
-   EndIf
-
-EndFunc
-
-   ;5 tabs to 'Generate Report' on 'UFED Physical Analyzer 6.2.0.79'
-   ;WinActivate('UFED Physical Analyzer 6.2.0.79')
-   ;Send('{TAB 5}')
-   ;Send('{ENTER}')
+;5 tabs to 'Generate Report' on 'UFED Physical Analyzer 6.2.0.79'
+;WinActivate('UFED Physical Analyzer 6.2.0.79')
+;Send('{TAB 5}')
+;Send('{ENTER}')
