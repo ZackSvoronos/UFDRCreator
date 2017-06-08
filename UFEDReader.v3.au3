@@ -7,6 +7,7 @@
 Local $popups[5] = ['New version is available', 'Did you know…', 'Recover additional location data: Time-limited free service', 'Device time zone detected', 'Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service']
 
 Local $hardcodedSaveDirectory = 'C:\Users\Zack\Documents\My Reports'
+Local $hardcodedExaminerName = 'Bill'
 
 UFEDReader()
 ;WindowNav()
@@ -17,18 +18,24 @@ Func UFEDReader()
    Local $ufdsInDirectory = _FileListToArrayRec($FilePath, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
    ;_ArrayDisplay($ufdsInDirectory, "File Display")
 
-;~    For $i = 1 To $ufdsInDirectory[0]
-;~ 	  ShellExecute($FilePath & '\' & $ufdsInDirectory[$i])
-;~ 	  ; Sleep to let program startup
-;~ 	  If $i = 1 Then
-;~ 		 Sleep(20 * 1000)
-;~ 	  EndIf
+   For $i = 1 To $ufdsInDirectory[0]
+	  ShellExecute($FilePath & '\' & $ufdsInDirectory[$i])
+	  ; Sleep to let program startup
+	  If $i = 1 Then
+		 Sleep(20 * 1000)
+	  EndIf
+   Next
+
+   WaitUntilFinished()
+
+   WinClose('Device time zone detected')
+   Sleep(1000)
+   WinClose('Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service')
+
+;~    For $i = 0 To $ufdsInDirectory[0]
+;~ 	  GenerateReport($ufdsInDirectory, 0, $hardcodedSaveDirectory, $hardcodedExaminerName)
 ;~    Next
 
-;~    WaitUntilFinished()
-
-   Sleep(5 * 1000)
-   GenerateReport($ufdsInDirectory, 0, $hardcodedSaveDirectory)
 
 EndFunc
 
@@ -88,7 +95,7 @@ EndFunc
 ;EndFunc
 
 ;~ generate a report for the given ufd
-Func GenerateReport($ufds, $index, $saveDirectory)
+Func GenerateReport($ufds, $index, $saveDirectory, $examinerName)
 ;~ WinActivate('UFED Physical Analyzer 6.2.0.79')
    Send('^r')
    ; File name:
@@ -99,16 +106,21 @@ Func GenerateReport($ufds, $index, $saveDirectory)
    Replace($saveDirectory)
    ; Project
    $windowPosition = WinGetPos('Generate Report')
-;~    If Not ($ufds[0] = 1) Then
-;~ 	  MouseClick("left", $windowPosition[0] + 600, $windowPosition[1] + 200, 1, 0)
-;~ 	  Send('{HOME}{DOWN ' & $index & '}{SPACE}')
-;~ 	  Send('{END}{DOWN}{ENTER}')
-;~    EndIf
+   If Not ($ufds[0] = 1) Then
+	  MouseClick("left", $windowPosition[0] + 600, $windowPosition[1] + 200, 1, 0)
+	  Send('{HOME}{DOWN ' & $index & '}{SPACE}')
+	  Send('{END}{DOWN}{ENTER}')
+   EndIf
    ; Format
    MouseClick("left", $windowPosition[0] + 600, $windowPosition[1] + 230, 1, 0)
    Send('{HOME}{SPACE}')
    Send('{END}{DOWN}{ENTER}')
+   ; Examiner Name
+   Send('{Tab 11}' & $examinerName)
+   ; Finish
+   Send('{TAB 4}{ENTER}{TAB}{ENTER}')
 EndFunc
+
 
 Func Replace($str)
    Send('^a')
