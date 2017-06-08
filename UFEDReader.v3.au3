@@ -18,23 +18,27 @@ Func UFEDReader()
    Local $ufdsInDirectory = _FileListToArrayRec($FilePath, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
    ;_ArrayDisplay($ufdsInDirectory, "File Display")
 
-   For $i = 1 To $ufdsInDirectory[0]
-	  ShellExecute($FilePath & '\' & $ufdsInDirectory[$i])
-	  ; Sleep to let program startup
-	  If $i = 1 Then
-		 Sleep(20 * 1000)
-	  EndIf
-   Next
-
-   WaitUntilFinished()
-
-   WinClose('Device time zone detected')
-   Sleep(1000)
-   WinClose('Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service')
-
-;~    For $i = 0 To $ufdsInDirectory[0]
-;~ 	  GenerateReport($ufdsInDirectory, 0, $hardcodedSaveDirectory, $hardcodedExaminerName)
+;~    For $i = 1 To $ufdsInDirectory[0]
+;~ 	  ShellExecute($FilePath & '\' & $ufdsInDirectory[$i])
+;~ 	  ; Sleep to let program startup
+;~ 	  If $i = 1 Then
+;~ 		 Sleep(20 * 1000)
+;~ 	  EndIf
 ;~    Next
+
+;~    WaitUntilFinished()
+
+;~    WinClose('Device time zone detected')
+;~    Sleep(1000)
+;~    WinClose('Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service')
+
+   Sleep(5 * 1000)
+   ;GenerateReport($ufdsInDirectory, 0, $hardcodedSaveDirectory, $hardcodedExaminerName)
+
+   For $i = 0 To ($ufdsInDirectory[0]-1)
+	  GenerateReport($ufdsInDirectory, $i, $hardcodedSaveDirectory, $hardcodedExaminerName)
+	  Sleep(1000)
+   Next
 
 
 EndFunc
@@ -81,22 +85,9 @@ Func GetFileName($path)
    return $sFileName
 EndFunc
 
-;Func UFEDReader()
-   ;$FilePath = 'C:\Users\Zack\Documents\My UFED Extractions'
-   ;Local $ufdsInDirectory = _FileListToArrayRec($FilePath, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
-   ;Run('C:\Program Files\Cellebrite Mobile Synchronization\UFED Physical Analyzer\UFEDPhysicalAnalyzer.exe')
-
-   ;While ProcessExists('UFEDPhysicalAnalyzer.exe')
-	  ;For $i = 1 To $ufdsInDirectory[0]
-		 ;ShellExecute($FilePath & '\' & $ufdsInDirectory[$i])
-	  ;Next
-   ;CloseWindows()
-   ;WEnd
-;EndFunc
-
 ;~ generate a report for the given ufd
 Func GenerateReport($ufds, $index, $saveDirectory, $examinerName)
-;~ WinActivate('UFED Physical Analyzer 6.2.0.79')
+   WinActivate('UFED Physical Analyzer 6.2.0.79')
    Send('^r')
    ; File name:
    Send('{TAB 3}')
@@ -116,9 +107,19 @@ Func GenerateReport($ufds, $index, $saveDirectory, $examinerName)
    Send('{HOME}{SPACE}')
    Send('{END}{DOWN}{ENTER}')
    ; Examiner Name
-   Send('{Tab 11}' & $examinerName)
+   MouseClick('left', $windowPosition[0] + 600, $windowPosition[1] + 390, 1, 0)
+   Send($examinerName)
    ; Finish
-   Send('{TAB 4}{ENTER}{TAB}{ENTER}')
+   Send('{TAB 4}')
+   Send('{ENTER}')
+   Sleep(100)
+   Send('{TAB}')
+   Send('{ENTER}')
+   ; wait for report to run
+   WinWait('Generated report')
+   WinActivate('Generated report')
+   Send('{TAB}')
+   Send('{ENTER}')
 EndFunc
 
 
