@@ -6,6 +6,8 @@
 
 Local $popups[5] = ['New version is available', 'Did you know…', 'Recover additional location data: Time-limited free service', 'Device time zone detected', 'Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service']
 
+Local $hardcodedSaveDirectory = 'C:\Users\Zack\Documents\My Reports'
+
 UFEDReader()
 ;WindowNav()
 
@@ -15,24 +17,23 @@ Func UFEDReader()
    Local $ufdsInDirectory = _FileListToArrayRec($FilePath, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
    ;_ArrayDisplay($ufdsInDirectory, "File Display")
 
-   For $i = 1 To $ufdsInDirectory[0]
-	  ShellExecute($FilePath & '\' & $ufdsInDirectory[$i])
-	  ; Sleep 1 min for the first file to start up
-	  If $i = 1 Then
-		 Sleep(20 * 1000)
-	  EndIf
-   Next
+;~    For $i = 1 To $ufdsInDirectory[0]
+;~ 	  ShellExecute($FilePath & '\' & $ufdsInDirectory[$i])
+;~ 	  ; Sleep to let program startup
+;~ 	  If $i = 1 Then
+;~ 		 Sleep(20 * 1000)
+;~ 	  EndIf
+;~    Next
 
-   WaitUntilFinished()
+;~    WaitUntilFinished()
 
-
+   Sleep(5 * 1000)
+   GenerateReport('C:\THIS_IS_A_MD5_HASH.ufd', $hardcodedSaveDirectory)
 
 EndFunc
 
 Func CloseAllPopups()
-   ConsoleWrite('In ClosePopups' & @CRLF)
    While PopupsExist()
-	  ConsoleWrite('Popups Found' & @CRLF)
 	  ClosePopups()
 	  Sleep(1000)
    Wend
@@ -64,6 +65,15 @@ Func WaitUntilFinished()
    WEnd
 EndFunc
 
+Func GetFileName($path)
+   $sDrive = ''
+   $sDir = ''
+   $sFileName = ''
+   $sExtension = ''
+   $aPathSplit = _PathSplit($path, $sDrive, $sDir, $sFileName, $sExtension)
+   return $sFileName
+EndFunc
+
 ;Func UFEDReader()
    ;$FilePath = 'C:\Users\Zack\Documents\My UFED Extractions'
    ;Local $ufdsInDirectory = _FileListToArrayRec($FilePath, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
@@ -77,8 +87,24 @@ EndFunc
    ;WEnd
 ;EndFunc
 
+;~ generate a report for the given ufd
+Func GenerateReport($path, $saveDirectory)
+;~ WinActivate('UFED Physical Analyzer 6.2.0.79')
+   Send('^r')
+   ; File name:
+   Send('{TAB 3}')
+   Replace(GetFileName($path))
+   ; Save to:
+   Send('{TAB}')
+   Replace($saveDirectory)
+   ; Format
+   $windowPosition = WinGetPos('Generate Report')
+   MouseClick("left", $windowPosition[0] + 600, $windowPosition[1] + 230, 1, 0)
+   Send('{HOME}{SPACE}')
+   Send('{END}{DOWN}{ENTER}')
+EndFunc
 
-;5 tabs to 'Generate Report' on 'UFED Physical Analyzer 6.2.0.79'
-;WinActivate('UFED Physical Analyzer 6.2.0.79')
-;Send('{TAB 5}')
-;Send('{ENTER}')
+Func Replace($str)
+   Send('^a')
+   Send($str)
+EndFunc
