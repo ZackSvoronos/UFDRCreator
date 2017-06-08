@@ -28,7 +28,7 @@ Func UFEDReader()
 ;~    WaitUntilFinished()
 
    Sleep(5 * 1000)
-   GenerateReport('C:\THIS_IS_A_MD5_HASH.ufd', $hardcodedSaveDirectory)
+   GenerateReport($ufdsInDirectory, 0, $hardcodedSaveDirectory)
 
 EndFunc
 
@@ -88,17 +88,23 @@ EndFunc
 ;EndFunc
 
 ;~ generate a report for the given ufd
-Func GenerateReport($path, $saveDirectory)
+Func GenerateReport($ufds, $index, $saveDirectory)
 ;~ WinActivate('UFED Physical Analyzer 6.2.0.79')
    Send('^r')
    ; File name:
    Send('{TAB 3}')
-   Replace(GetFileName($path))
+   Replace(GetFileName($ufds[$index+1]))
    ; Save to:
    Send('{TAB}')
    Replace($saveDirectory)
-   ; Format
+   ; Project
    $windowPosition = WinGetPos('Generate Report')
+;~    If Not ($ufds[0] = 1) Then
+;~ 	  MouseClick("left", $windowPosition[0] + 600, $windowPosition[1] + 200, 1, 0)
+;~ 	  Send('{HOME}{DOWN ' & $index & '}{SPACE}')
+;~ 	  Send('{END}{DOWN}{ENTER}')
+;~    EndIf
+   ; Format
    MouseClick("left", $windowPosition[0] + 600, $windowPosition[1] + 230, 1, 0)
    Send('{HOME}{SPACE}')
    Send('{END}{DOWN}{ENTER}')
