@@ -44,18 +44,13 @@ Func UFEDReader()
 
    WaitUntilFinished()
 
-   WinClose('Device time zone detected')
-   Sleep(1000)
-   WinClose('Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service')
-   Sleep(1000)
-
    For $i = 0 To ($ufdsInDirectory[0]-1)
 	  GenerateReport($ufdsInDirectory, $i, $outputDirectory, $examinerName)
 	  Sleep(1000)
    Next
 
-WinActivate('UFED Physical Analyzer 6.2.0.79')
-WinClose('UFED Physical Analyzer 6.2.0.79')
+   WinActivate('UFED Physical Analyzer 6.2.0.79')
+   WinClose('UFED Physical Analyzer 6.2.0.79')
 
 EndFunc
 
@@ -115,24 +110,29 @@ Func GenerateReport($ufds, $index, $saveDirectory, $examinerName)
    Replace($saveDirectory)
    ; Project
    $windowPosition = WinGetPos('Generate Report')
+   $winX = $windowPosition[0]
+   $winY = $windowPosition[1]
+   $winWidth = $windowPosition[2]
+   $winHeight = $windowPosition[3]
    If Not ($ufds[0] = 1) Then
-	  MouseClick("left", $windowPosition[0] + 600, $windowPosition[1] + 200, 1, 0)
+	  MouseClick("left", $winX + 600, $winY + 200, 1, 0)
 	  Send('{HOME}{DOWN ' & $index & '}{SPACE}')
 	  Send('{END}{DOWN}{ENTER}')
    EndIf
+   Sleep(1000)
    ; Format
-   MouseClick("left", $windowPosition[0] + 600, $windowPosition[1] + 230, 1, 0)
+   MouseClick("left", $winX + 600, $winY + 230, 1, 0)
    Send('{HOME}{SPACE}')
    Send('{END}{DOWN}{ENTER}')
    ; Examiner Name
-   MouseClick('left', $windowPosition[0] + 600, $windowPosition[1] + 390, 1, 0)
+   MouseClick('left', $winX + 600, $winY + 390, 1, 0)
    Send($examinerName)
-   ; Finish
-   Send('{TAB 4}')
-   Send('{ENTER}')
-   Sleep(100)
-   Send('{TAB}')
-   Send('{ENTER}')
+   Sleep(1000)
+   ; click Next
+   MouseClick('left', $winX + $winWidth - 300, $winY + $winHeight - 30, 1, 0)
+   Sleep(1000)
+   ; click Finish
+   MouseClick('left', $winX + $winWidth - 180, $winY + $winHeight - 30, 1, 0)
    ; wait for report to run
    WinWait('Generated report')
    WinActivate('Generated report')
@@ -145,6 +145,3 @@ Func Replace($str)
    Send('^a')
    Send($str)
 EndFunc
-
-
-
