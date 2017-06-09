@@ -2,15 +2,31 @@
 #include <StaticConstants.au3>
 #include <WindowsConstants.au3>
 #include <ColorConstants.au3>
-#include <file.au3>
+#include <Array.au3>
+#include <File.au3>
 
 Local $popups[5] = ['New version is available', 'Did you know…', 'Recover additional location data: Time-limited free service', 'Device time zone detected', 'Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service']
 
-Local $hardcodedSaveDirectory = 'C:\Users\Zack\Documents\My Reports'
-Local $hardcodedExaminerName = 'Bill'
+Local $examinerName = ''
+Local $outputDirectory = 'C:\\'
+
+Local $config
+Local $fileName = 'config'
+
+_FileReadToArray($fileName, $config, 2, '=')
+
+$numLines = UBound($config)
+For $i = 0 To ($numLines-1)
+   $param = StringStripWS(($config[$i])[0], BitOR($STR_STRIPLEADING, $STR_STRIPTRAILING))
+   $value = StringStripWS(($config[$i])[1], BitOR($STR_STRIPLEADING, $STR_STRIPTRAILING))
+   If $param == 'Examiner Name' Then
+	  $examinerName = $value
+   ElseIf $param == 'Output Directory' Then
+	  $fileName = $value
+   EndIf
+Next
 
 UFEDReader()
-;WindowNav()
 
 Func UFEDReader()
 
@@ -18,28 +34,28 @@ Func UFEDReader()
    Local $ufdsInDirectory = _FileListToArrayRec($FilePath, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
    ;_ArrayDisplay($ufdsInDirectory, "File Display")
 
-;~    For $i = 1 To $ufdsInDirectory[0]
-;~ 	  ShellExecute($FilePath & '\' & $ufdsInDirectory[$i])
-;~ 	  ; Sleep to let program startup
-;~ 	  If $i = 1 Then
-;~ 		 Sleep(20 * 1000)
-;~ 	  EndIf
-;~    Next
+   For $i = 1 To $ufdsInDirectory[0]
+	  ShellExecute($FilePath & '\' & $ufdsInDirectory[$i])
+	  ; Sleep to let program startup
+	  If $i = 1 Then
+		 Sleep(20 * 1000)
+	  EndIf
+   Next
 
-;~    WaitUntilFinished()
+   WaitUntilFinished()
 
-;~    WinClose('Device time zone detected')
-;~    Sleep(1000)
-;~    WinClose('Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service')
-
-   Sleep(5 * 1000)
-   ;GenerateReport($ufdsInDirectory, 0, $hardcodedSaveDirectory, $hardcodedExaminerName)
+   WinClose('Device time zone detected')
+   Sleep(1000)
+   WinClose('Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service')
+   Sleep(1000)
 
    For $i = 0 To ($ufdsInDirectory[0]-1)
-	  GenerateReport($ufdsInDirectory, $i, $hardcodedSaveDirectory, $hardcodedExaminerName)
+	  GenerateReport($ufdsInDirectory, $i, $outputDirectory, $examinerName)
 	  Sleep(1000)
    Next
 
+WinActivate('UFED Physical Analyzer 6.2.0.79')
+WinClose('UFED Physical Analyzer 6.2.0.79')
 
 EndFunc
 
@@ -70,10 +86,12 @@ Func ClosePopups()
 EndFunc
 
 Func WaitUntilFinished()
-   While Not(WinExists('Device time zone detected'))
+   While Not(WinExists('Generate Report'))
 	  Sleep(1 * 1000)
 	  CloseAllPopups()
+	  Send('^r')
    WEnd
+   WinClose('Generate Report')
 EndFunc
 
 Func GetFileName($path)
@@ -127,3 +145,6 @@ Func Replace($str)
    Send('^a')
    Send($str)
 EndFunc
+
+
+
