@@ -7,7 +7,8 @@
 
 Local $popups[5] = ['New version is available', 'Did you know…', 'Recover additional location data: Time-limited free service', 'Device time zone detected', 'Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service']
 
-Local $examinerName = ''
+Local $examinerName = 'Example Name'
+Local $inputDirectory = 'C;\\'
 Local $outputDirectory = 'C:\\'
 
 Local $config
@@ -21,6 +22,8 @@ For $i = 0 To ($numLines-1)
    $value = StringStripWS(($config[$i])[1], BitOR($STR_STRIPLEADING, $STR_STRIPTRAILING))
    If $param == 'Examiner Name' Then
 	  $examinerName = $value
+   ElseIf $param == 'Input Directory' Then
+	  $inputDirectory = $value
    ElseIf $param == 'Output Directory' Then
 	  $fileName = $value
    EndIf
@@ -30,13 +33,13 @@ UFEDReader()
 
 Func UFEDReader()
 
-   $FilePath = 'C:\Users\Zack\Documents\My UFED Extractions'
-   Local $ufdsInDirectory = _FileListToArrayRec($FilePath, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
-   ;_ArrayDisplay($ufdsInDirectory, "File Display")
+   ; recursively search for '.ufd' files in the input directory
+   Local $ufdsInDirectory = _FileListToArrayRec($inputDirectory, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
 
-   For $i = 1 To $ufdsInDirectory[0]
+   $numUfds = $ufdsInDirectory[0]
+   For $i = 1 To $numUfds
 	  ShellExecute($FilePath & '\' & $ufdsInDirectory[$i])
-	  ; Sleep to let program startup
+	  ; sleep to let program startup
 	  If $i = 1 Then
 		 Sleep(20 * 1000)
 	  EndIf
@@ -44,7 +47,7 @@ Func UFEDReader()
 
    WaitUntilFinished()
 
-   For $i = 0 To ($ufdsInDirectory[0]-1)
+   For $i = 0 To ($numUfds-1)
 	  GenerateReport($ufdsInDirectory, $i, $outputDirectory, $examinerName)
 	  Sleep(1000)
    Next
@@ -62,8 +65,8 @@ Func CloseAllPopups()
 EndFunc
 
 Func PopupsExist()
-   $popups_len = (UBound($popups)-1)
-   For $i = 0 to $popups_len
+   $popups_len = UBound($popups)
+   For $i = 0 to ($popups_len-1)
 	  if WinExists($popups[$i]) Then
 		 return True
 	  EndIf
@@ -72,8 +75,8 @@ Func PopupsExist()
 EndFunc
 
 Func ClosePopups()
-   $popups_len = (UBound($popups)-1)
-   For $i = 0 to $popups_len
+   $popups_len = UBound($popups)
+   For $i = 0 to ($popups_len-1)
 	  if WinExists($popups[$i]) Then
 		 WinClose($popups[$i])
 	  EndIf
@@ -114,6 +117,7 @@ Func GenerateReport($ufds, $index, $saveDirectory, $examinerName)
    $winY = $windowPosition[1]
    $winWidth = $windowPosition[2]
    $winHeight = $windowPosition[3]
+   ; if there is more than one '.ufd' file, select the right one from the drop down menu
    If Not ($ufds[0] = 1) Then
 	  MouseClick("left", $winX + 600, $winY + 200, 1, 0)
 	  Send('{HOME}{DOWN ' & $index & '}{SPACE}')
