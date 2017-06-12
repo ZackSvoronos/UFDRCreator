@@ -14,34 +14,29 @@ Local $outputDirectory = 'C:\\'
 Local $config
 Local $fileName = 'config'
 
-_FileReadToArray($fileName, $config, 2, '=')
+; title of analyzer window
+Local $analyzerWindowName = 'UFED Physical Analyzer 6.2.0.79'
 
-$numLines = UBound($config)
-For $i = 0 To ($numLines-1)
-   $param = StringStripWS(($config[$i])[0], BitOR($STR_STRIPLEADING, $STR_STRIPTRAILING))
-   $value = StringStripWS(($config[$i])[1], BitOR($STR_STRIPLEADING, $STR_STRIPTRAILING))
-   If $param == 'Examiner Name' Then
-	  $examinerName = $value
-   ElseIf $param == 'Input Directory' Then
-	  $inputDirectory = $value
-   ElseIf $param == 'Output Directory' Then
-	  $fileName = $value
-   EndIf
-Next
+Func Main()
 
-UFEDReader()
+   ; increase default key delay (miliseconds)
+   AutoItSetOption('SendKeyDelay', 25)
 
-Func UFEDReader()
+   LoadConfig()
 
    ; recursively search for '.ufd' files in the input directory
-   Local $ufdsInDirectory = _FileListToArrayRec($inputDirectory, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
+   $ufdsInDirectory = _FileListToArrayRec($inputDirectory, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
+   If @error Then
+	  ConsoleWrite('IO Error: Error on path ' & $inputDirectory & @CRLF)
+	  return
+   EndIf
 
    $numUfds = $ufdsInDirectory[0]
    For $i = 1 To $numUfds
-	  ShellExecute($FilePath & '\' & $ufdsInDirectory[$i])
-	  ; sleep to let program startup
+	  ShellExecute($inputDirectory & '\' & $ufdsInDirectory[$i])
+	  ; sleep after the first '.ufd' to let program start up
 	  If $i = 1 Then
-		 Sleep(20 * 1000)
+		 WaitForAnalyzerWindow()
 	  EndIf
    Next
 
@@ -49,11 +44,53 @@ Func UFEDReader()
 
    For $i = 0 To ($numUfds-1)
 	  GenerateReport($ufdsInDirectory, $i, $outputDirectory, $examinerName)
-	  Sleep(1000)
+	  Sleep(1 * 1000)
    Next
 
-   WinActivate('UFED Physical Analyzer 6.2.0.79')
-   WinClose('UFED Physical Analyzer 6.2.0.79')
+   WinActivate($analyzerWindowName)
+   WinClose($analyzerWindowName)
+   Sleep(1 * 1000)
+   If WinExists('Warning') Then
+	  Send('{ENTER}')
+   EndIf
+
+EndFunc
+
+; load configuration file
+Func LoadConfig()
+
+   _FileReadToArray($fileName, $config, 2, '=')
+
+   $numLines = UBound($config)
+   For $i = 0 To ($numLines-1)
+	  $param = StringStripWS(($config[$i])[0], BitOR($STR_STRIPLEADING, $STR_STRIPTRAILING))
+	  $value = StringStripWS(($config[$i])[1], BitOR($STR_STRIPLEADING, $STR_STRIPTRAILING))
+	  If $param == 'Examiner Name' Then
+		 $examinerName = $value
+	  ElseIf $param == 'Input Directory' Then
+		 $inputDirectory = $value
+	  ElseIf $param == 'Output Directory' Then
+		 $outputDirectory = $value
+	  EndIf
+   Next
+
+EndFunc
+
+func WaitForAnalyzerWindow()
+
+   While True
+	  $windows = WinList()
+
+	  For $i = 1 To $windows[0][0]
+		 If StringInStr($windows[$i][0], 'UFED Physical Analyzer') Then
+			$analyzerWindowName = $windows[$i][0]
+			Sleep(10 * 1000)
+			return
+		 EndIf
+	  Next
+
+	  Sleep(10 * 1000)
+   WEnd
 
 EndFunc
 
@@ -84,12 +121,14 @@ Func ClosePopups()
 EndFunc
 
 Func WaitUntilFinished()
-   While Not(WinExists('Generate Report'))
-	  Sleep(1 * 1000)
+   While Not (WinExists('Generate Report'))
+	  Sleep(9 * 1000)
 	  CloseAllPopups()
+	  ; try to generate a report (only succeeds when all '.ufds' are finished processing)
+	  WinActivate($analyzerWindowName)
 	  Send('^r')
+	  Sleep(1 * 1000)
    WEnd
-   WinClose('Generate Report')
 EndFunc
 
 Func GetFileName($path)
@@ -101,16 +140,22 @@ Func GetFileName($path)
    return $sFileName
 EndFunc
 
-;~ generate a report for the given ufd
+; generate a report for the given ufd
 Func GenerateReport($ufds, $index, $saveDirectory, $examinerName)
-   WinActivate('UFED Physical Analyzer 6.2.0.79')
-   Send('^r')
+   ; open generate report window (already open for first report)
+   If Not ($index = 0) Then
+	  WinActivate($analyzerWindowName)
+	  Send('^r')
+	  Sleep(1 * 1000)
+   EndIf
    ; File name:
    Send('{TAB 3}')
    Replace(GetFileName($ufds[$index+1]))
    ; Save to:
+   Send('{TAB 2}{ENTER}')
+   Send($saveDirectory)
    Send('{TAB}')
-   Replace($saveDirectory)
+   Send('{ENTER}')
    ; Project
    $windowPosition = WinGetPos('Generate Report')
    $winX = $windowPosition[0]
@@ -144,8 +189,9 @@ Func GenerateReport($ufds, $index, $saveDirectory, $examinerName)
    Send('{ENTER}')
 EndFunc
 
-
 Func Replace($str)
    Send('^a')
    Send($str)
 EndFunc
+
+Main()
