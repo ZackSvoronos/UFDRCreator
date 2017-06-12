@@ -24,6 +24,8 @@ Func Main()
 
    LoadConfig()
 
+   ReadCommandLineArgs()
+
    ; recursively search for '.ufd' files in the input directory
    $ufdsInDirectory = _FileListToArrayRec($inputDirectory, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
    If @error Then
@@ -56,7 +58,6 @@ Func Main()
 
 EndFunc
 
-; load configuration file
 Func LoadConfig()
 
    _FileReadToArray($fileName, $config, 2, '=')
@@ -71,6 +72,21 @@ Func LoadConfig()
 		 $inputDirectory = $value
 	  ElseIf $param == 'Output Directory' Then
 		 $outputDirectory = $value
+	  EndIf
+   Next
+
+EndFunc
+
+Func ReadCommandLineArgs()
+
+   $numArgs = $CmdLine[0]
+   For $i = 1 To $numArgs
+	  If $CmdLine[$i] == '-i' Then
+		 $inputDirectory = $CmdLine[$i+1]
+	  ElseIf $CmdLine[$i] == '-o' Then
+		 $outputDirectory = $CmdLine[$i+1]
+	  ElseIf $CmdLine[$i] == '-e' Then
+		 $examinerName = $CmdLine[$i+1]
 	  EndIf
    Next
 
@@ -153,6 +169,8 @@ Func GenerateReport($ufds, $index, $saveDirectory, $examinerName)
    Replace(GetFileName($ufds[$index+1]))
    ; Save to:
    Send('{TAB 2}{ENTER}')
+   Sleep(1 * 1000)
+   ControlClick('Select Folder', '', 1152)
    Send($saveDirectory)
    Send('{TAB}')
    Send('{ENTER}')
