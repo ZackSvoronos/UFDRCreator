@@ -121,42 +121,25 @@ EndFunc
 
 Func ProcessFile($path)
 
-   _ArrayAdd($processedFiles, GetFileName($path))
-   SaveProcessedFilesLog()
+   ShellExecute($inputDirectory & '\' & $path)
 
-EndFunc
-
-Func Deprecated()
-
-   ; recursively search for '.ufd' files in the input directory
-   $ufdsInDirectory = _FileListToArrayRec($inputDirectory, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
-   If @error Then
-	  ConsoleWrite('IO Error: Error on path ' & $inputDirectory & @CRLF)
-	  return
-   EndIf
-
-   $numUfds = $ufdsInDirectory[0]
-   For $i = 1 To $numUfds
-	  ShellExecute($inputDirectory & '\' & $ufdsInDirectory[$i])
-	  ; sleep after the first '.ufd' to let program start up
-	  If $i = 1 Then
-		 WaitForAnalyzerWindow()
-	  EndIf
-   Next
+   WaitForAnalyzerWindow()
 
    WaitUntilFinished()
 
-   For $i = 0 To ($numUfds-1)
-	  GenerateReport($ufdsInDirectory, $i, $outputDirectory, $examinerName)
-	  Sleep(1 * 1000)
-   Next
+   GenerateReport($path, $outputDirectory, $examinerName)
 
+   ; close UFED Physical Analyzer
    WinActivate($analyzerWindowName)
    WinClose($analyzerWindowName)
    Sleep(1 * 1000)
    If WinExists('Warning') Then
 	  Send('{ENTER}')
+	  Sleep(1 * 1000)
    EndIf
+
+   _ArrayAdd($processedFiles, GetFileName($path))
+   SaveProcessedFilesLog()
 
 EndFunc
 
@@ -225,16 +208,10 @@ Func GetFileName($path)
 EndFunc
 
 ; generate a report for the given ufd
-Func GenerateReport($ufds, $index, $saveDirectory, $examinerName)
-   ; open generate report window (already open for first report)
-   If Not ($index = 0) Then
-	  WinActivate($analyzerWindowName)
-	  Send('^r')
-	  Sleep(1 * 1000)
-   EndIf
+Func GenerateReport($path, $saveDirectory, $examinerName)
    ; File name:
    Send('{TAB 3}')
-   Replace(GetFileName($ufds[$index+1]))
+   Replace(GetFileName($path))
    ; Save to:
    Send('{TAB 2}{ENTER}')
    Sleep(1 * 1000)
@@ -248,13 +225,6 @@ Func GenerateReport($ufds, $index, $saveDirectory, $examinerName)
    $winY = $windowPosition[1]
    $winWidth = $windowPosition[2]
    $winHeight = $windowPosition[3]
-   ; if there is more than one '.ufd' file, select the right one from the drop down menu
-   If Not ($ufds[0] = 1) Then
-	  MouseClick("left", $winX + 600, $winY + 200, 1, 0)
-	  Send('{HOME}{DOWN ' & $index & '}{SPACE}')
-	  Send('{END}{DOWN}{ENTER}')
-   EndIf
-   Sleep(1000)
    ; Format
    MouseClick("left", $winX + 600, $winY + 230, 1, 0)
    Send('{HOME}{SPACE}')
