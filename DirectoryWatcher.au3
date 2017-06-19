@@ -98,7 +98,7 @@ Func LoadFileLog($filename, $array)
 EndFunc
 
 Func SaveFileLog($array, $filename)
-   $path = $inputDirectory & '\' & filename
+   $path = $inputDirectory & '\' & $filename
    _FileWriteFromArray($path, $array)
 EndFunc
 
@@ -213,6 +213,10 @@ EndFunc
 ; generate a report for the given ufd
 Func GenerateReport($path)
    $previousDirectoriesInOutput = _FileListToArray($outputDirectory, '*', $FLTA_FOLDERS)
+   $noPreviousDirectoriesInOutput = False
+   If @error Then
+	  $noPreviousDirectoriesInOutput = True
+   EndIf
 
    ; File name:
    Send('{TAB 3}')
@@ -259,13 +263,20 @@ Func GenerateReport($path)
 
    ; copy '.ufdr' file to final location
    $currentDirectoriesInOutput = _FileListToArray($outputDirectory, '*', $FLTA_FOLDERS)
-   $newDirectory = FindNewDirectory($previousDirectoriesInOutput, $currentDirectoriesInOutput)
-   If Not ($newDirectory = Null) Then
-	  $ufdrs = _FileListToArrayRec($outputDirectory & $newDirectory, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
-	  If $ufdrs[0] > 0 Then
-		 $copySrc = $outputDirectory & '\' & $newDirectory & '\' & ufdrs[1]
-		 $copyDst = $finalLocation & '\' & GetFileName($path)
-		 FileCopy($copySrc, $copyDst, $FC_OVERWRITE)
+   If Not @error Then
+	  Local $newDirectory = Null
+	  If $noPreviousDirectoriesInOutput Then
+		 $newDirectory = $currentDirectoriesInOutput[1]
+	  Else
+		 $newDirectory = FindNewDirectory($previousDirectoriesInOutput, $currentDirectoriesInOutput)
+	  EndIf
+	  If Not ($newDirectory = Null) Then
+		 $ufdrs = _FileListToArrayRec($outputDirectory & '\' & $newDirectory, '*.ufdr', $FLTAR_FILES, $FLTAR_RECUR)
+		 If Not @error Then
+			$copySrc = $outputDirectory & '\' & $newDirectory & '\' & $ufdrs[1]
+			$copyDst = $finalLocation & '\' & GetFileName($path) & '.ufdr'
+			FileCopy($copySrc, $copyDst, $FC_OVERWRITE)
+		 EndIf
 	  EndIf
    EndIf
 
@@ -303,4 +314,4 @@ Func TestMain()
    GenerateReport('Samsung GSM GT-I9250 Galaxy Nexus 2017_06_02 (001)\Physical ADB 01\Samsung GSM_GT-I9250 Galaxy Nexus.ufd')
 EndFunc
 
-Main()
+TestMain()
