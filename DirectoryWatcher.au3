@@ -7,17 +7,19 @@
 
 Local $popups[5] = ['New version is available', 'Did you know…', 'Recover additional location data: Time-limited free service', 'Device time zone detected', 'Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service']
 
-Local $inputDirectory = 'C:\\'
-Local $outputDirectory = 'C:\\'
-Local $examinerName = 'Example Name'
+; these are read from the config file or overwritten by command line arguments
+Local $inputDirectory = ''
+Local $outputDirectory = ''
+Local $finalLocation = ''
+Local $examinerName = ''
 
-; title of analyzer window (set when UFED Physical Analyzer starts up)
+; title of analyzer window (this is just an example, variable is set when program starts up)
 Local $analyzerWindowName = 'UFED Physical Analyzer 6.2.0.79'
 
 Local $processedFiles[0]
+Local $failedFiles[0]
 
 Func Main()
-
    ; increase default key delay (miliseconds)
    AutoItSetOption('SendKeyDelay', 25)
 
@@ -25,7 +27,12 @@ Func Main()
 
    ReadCommandLineArgs()
 
-   LoadProcessedFilesLog()
+   ; check that all directories are valid
+   CheckDirIsValid($inputDirectory)
+   CheckDirIsValid($outputDirectory)
+   CheckDirIsValid($finalLocation)
+
+   LoadFileLogs()
 
    While True
 	  $newFile = NextNewFile()
@@ -35,62 +42,67 @@ Func Main()
 		 Sleep(1 * 1000)
 	  EndIf
    WEnd
+EndFunc
 
+Func CheckDirIsValid($path)
+   If (Not FileExists($path)) Or (Not StringInStr(FileGetAttrib($path), 'D')) Then
+	  ConsoleWrite('Error: ' & $path & ' is not a valid directory' & @CRLF)
+	  Exit 1
+   EndIf
 EndFunc
 
 Func LoadConfig()
-
    Local $config
    _FileReadToArray('config', $config, $FRTA_INTARRAYS, '=')
 
-   $numLines = UBound($config)
-   For $i = 0 To ($numLines-1)
+   For $i = 0 To (UBound($config)-1)
 	  $param = StringStripWS(($config[$i])[0], BitOR($STR_STRIPLEADING, $STR_STRIPTRAILING))
 	  $value = StringStripWS(($config[$i])[1], BitOR($STR_STRIPLEADING, $STR_STRIPTRAILING))
-	  If $param == 'Examiner Name' Then
-		 $examinerName = $value
-	  ElseIf $param == 'Input Directory' Then
+	  If $param == 'Input Directory' Then
 		 $inputDirectory = $value
 	  ElseIf $param == 'Output Directory' Then
 		 $outputDirectory = $value
+	  ElseIf $param == 'Final Location' Then
+		 $finalLocation = $value
+	  ElseIf $param == 'Examiner Name' Then
+		 $examinerName = $value
 	  EndIf
    Next
-
 EndFunc
 
 Func ReadCommandLineArgs()
-
    $numArgs = $CmdLine[0]
    For $i = 1 To $numArgs
 	  If $CmdLine[$i] == '-i' Then
 		 $inputDirectory = $CmdLine[$i+1]
 	  ElseIf $CmdLine[$i] == '-o' Then
 		 $outputDirectory = $CmdLine[$i+1]
+	  ElseIf $CmdLine[$i] == '-f' Then
+		 $finalLocation = $CmdLine[$i+1]
 	  ElseIf $CmdLine[$i] == '-e' Then
 		 $examinerName = $CmdLine[$i+1]
 	  EndIf
    Next
-
 EndFunc
 
-Func LoadProcessedFilesLog()
+Func LoadFileLogs()
+   LoadFileLog('processed', $processedFiles)
+   LoadFileLog('failed', $failedFiles)
+EndFunc
 
-   $processedFilesLogPath = $inputDirectory & '\processed'
-   If FileExists($processedFilesLogPath) Then
-	  _FileReadToArray($processedFilesLogPath, $processedFiles, $FRTA_NOCOUNT)
+Func LoadFileLog($filename, $array)
+   $path = $inputDirectory & '\' & $filename
+   If FileExists($path) Then
+	  _FileReadToArray($path, $array, $FRTA_NOCOUNT)
    EndIf
-
 EndFunc
 
-Func SaveProcessedFilesLog()
-
-   $processedFilesLogPath = $inputDirectory & '\processed'
-   _FileWriteFromArray($processedFilesLogPath, $processedFiles)
-
+Func SaveFileLog($array, $filename)
+   $path = $inputDirectory & '\' & filename
+   _FileWriteFromArray($path, $array)
 EndFunc
 
 Func NextNewFile()
-
    ; recursively search for '.ufd' files in the input directory
    $ufds = _FileListToArrayRec($inputDirectory, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
    If @error Then
@@ -100,34 +112,31 @@ Func NextNewFile()
 
    ; get the first '.ufd' file that hasn't been processed (or return Null if all have been processed)
    For $i = 1 To $ufds[0]
-	  If Not ArrayContainsString($processedFiles, GetFileName($ufds[$i])) Then
+	  $filename = GetFileName($ufds[$i])
+	  If (Not ArrayContainsString($processedFiles, $filename)) And (Not ArrayContainsString($failedFiles, $filename)) Then
 		 Return $ufds[$i]
 	  EndIf
    Next
    Return Null
-
 EndFunc
 
 Func ArrayContainsString($array, $string)
-
    For $i = 0 To (UBound($array)-1)
 	  If $array[$i] == $string Then
 		 Return True
 	  EndIf
    Next
    Return False
-
 EndFunc
 
 Func ProcessFile($path)
-
    ShellExecute($inputDirectory & '\' & $path)
 
    WaitForAnalyzerWindow()
 
    WaitUntilFinished()
 
-   GenerateReport($path, $outputDirectory, $examinerName)
+   GenerateReport($path)
 
    ; close UFED Physical Analyzer
    WinActivate($analyzerWindowName)
@@ -137,14 +146,9 @@ Func ProcessFile($path)
 	  Send('{ENTER}')
 	  Sleep(1 * 1000)
    EndIf
-
-   _ArrayAdd($processedFiles, GetFileName($path))
-   SaveProcessedFilesLog()
-
 EndFunc
 
 Func WaitForAnalyzerWindow()
-
    While True
 	  $windows = WinList()
 
@@ -158,7 +162,6 @@ Func WaitForAnalyzerWindow()
 
 	  Sleep(10 * 1000)
    WEnd
-
 EndFunc
 
 Func CloseAllPopups()
@@ -208,7 +211,9 @@ Func GetFileName($path)
 EndFunc
 
 ; generate a report for the given ufd
-Func GenerateReport($path, $saveDirectory, $examinerName)
+Func GenerateReport($path)
+   $previousDirectoriesInOutput = _FileListToArray($outputDirectory, '*', $FLTA_FOLDERS)
+
    ; File name:
    Send('{TAB 3}')
    Replace(GetFileName($path))
@@ -216,7 +221,7 @@ Func GenerateReport($path, $saveDirectory, $examinerName)
    Send('{TAB 2}{ENTER}')
    Sleep(1 * 1000)
    ControlClick('Select Folder', '', 1152)
-   Send($saveDirectory)
+   Send($outputDirectory)
    Send('{TAB}')
    Send('{ENTER}')
    ; Project
@@ -238,16 +243,64 @@ Func GenerateReport($path, $saveDirectory, $examinerName)
    Sleep(1000)
    ; click Finish
    MouseClick('left', $winX + $winWidth - 180, $winY + $winHeight - 30, 1, 0)
+   ; if 'Generated report' window doesn't close, then 'Finish' button didn't work, so extraction failed
+   Sleep(5 * 1000)
+   If WinExists('Generate Report') Then
+	  ; log as failed
+	  _ArrayAdd($failedFiles, GetFileName($path))
+	  SaveFileLog($failedFiles, 'failed')
+	  Return
+   EndIf
    ; wait for report to run
    WinWait('Generated report')
    WinActivate('Generated report')
    Send('{TAB}')
    Send('{ENTER}')
+
+   ; copy '.ufdr' file to final location
+   $currentDirectoriesInOutput = _FileListToArray($outputDirectory, '*', $FLTA_FOLDERS)
+   $newDirectory = FindNewDirectory($previousDirectoriesInOutput, $currentDirectoriesInOutput)
+   If Not ($newDirectory = Null) Then
+	  $ufdrs = _FileListToArrayRec($outputDirectory & $newDirectory, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
+	  If $ufdrs[0] > 0 Then
+		 $copySrc = $outputDirectory & '\' & $newDirectory & '\' & ufdrs[1]
+		 $copyDst = $finalLocation & '\' & GetFileName($path)
+		 FileCopy($copySrc, $copyDst, $FC_OVERWRITE)
+	  EndIf
+   EndIf
+
+   ; log as processed
+   _ArrayAdd($processedFiles, GetFileName($path))
+   SaveFileLog($processedFiles, 'processed')
 EndFunc
 
 Func Replace($str)
    Send('^a')
    Send($str)
+EndFunc
+
+Func FindNewDirectory($previousDirs, $currentDirs)
+   For $curIndex = 1 To $currentDirs[0]
+	  $found = False
+	  For $prevIndex = 1 To $previousDirs[0]
+		 If $currentDirs[$curIndex] == $previousDirs[$prevIndex] Then
+			$found = True
+		 EndIf
+	  Next
+	  If Not $found Then
+		 Return $currentDirs[$curIndex]
+	  EndIf
+   Next
+   Return Null
+EndFunc
+
+Func TestMain()
+   LoadConfig()
+
+   WinActivate($analyzerWindowName)
+   Send('^r')
+   Sleep(1 * 1000)
+   GenerateReport('Samsung GSM GT-I9250 Galaxy Nexus 2017_06_02 (001)\Physical ADB 01\Samsung GSM_GT-I9250 Galaxy Nexus.ufd')
 EndFunc
 
 Main()
