@@ -16,6 +16,7 @@ Local $examinerName = ''
 ; title of analyzer window (this is just an example, variable is set when program starts up)
 Local $analyzerWindowName = 'UFED Physical Analyzer 6.2.0.79'
 
+; list of '.ufd' files that have been successfully processed or failed to process (will not be retried)
 Local $processedFiles[0]
 Local $failedFiles[0]
 
@@ -34,6 +35,8 @@ Func Main()
 
    LoadFileLogs()
 
+   ; look for new '.ufd' files in the input directory to process
+   ; if none are found, wait and retry
    While True
 	  $newFile = NextNewFile()
 	  If Not ($newFile = Null) Then
@@ -250,6 +253,7 @@ Func GenerateReport($path)
    ; if 'Generated report' window doesn't close, then 'Finish' button didn't work, so extraction failed
    Sleep(5 * 1000)
    If WinExists('Generate Report') Then
+	  WinClose('Generate Report')
 	  ; log as failed
 	  _ArrayAdd($failedFiles, GetFileName($path))
 	  SaveFileLog($failedFiles, 'failed')
@@ -305,13 +309,13 @@ Func FindNewDirectory($previousDirs, $currentDirs)
    Return Null
 EndFunc
 
-Func TestMain()
-   LoadConfig()
+;~ Func TestMain()
+;~    LoadConfig()
 
-   WinActivate($analyzerWindowName)
-   Send('^r')
-   Sleep(1 * 1000)
-   GenerateReport('Samsung GSM GT-I9250 Galaxy Nexus 2017_06_02 (001)\Physical ADB 01\Samsung GSM_GT-I9250 Galaxy Nexus.ufd')
-EndFunc
+;~    WinActivate($analyzerWindowName)
+;~    Send('^r')
+;~    Sleep(1 * 1000)
+;~    GenerateReport('Samsung GSM GT-I9250 Galaxy Nexus 2017_06_02 (001)\Physical ADB 01\Samsung GSM_GT-I9250 Galaxy Nexus.ufd')
+;~ EndFunc
 
-TestMain()
+Main()
