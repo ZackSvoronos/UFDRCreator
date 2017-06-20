@@ -175,8 +175,7 @@ Func CloseAllPopups()
 EndFunc
 
 Func PopupsExist()
-   $popups_len = UBound($popups)
-   For $i = 0 to ($popups_len-1)
+   For $i = 0 to (UBound($popups)-1)
 	  if WinExists($popups[$i]) Then
 		 return True
 	  EndIf
@@ -185,8 +184,7 @@ Func PopupsExist()
 EndFunc
 
 Func ClosePopups()
-   $popups_len = UBound($popups)
-   For $i = 0 to ($popups_len-1)
+   For $i = 0 to (UBound($popups)-1)
 	  if WinExists($popups[$i]) Then
 		 WinClose($popups[$i])
 	  EndIf
@@ -197,7 +195,7 @@ Func WaitUntilFinished()
    While Not (WinExists('Generate Report'))
 	  Sleep(9 * 1000)
 	  CloseAllPopups()
-	  ; try to generate a report (only succeeds when all '.ufds' are finished processing)
+	  ; try to generate a report (only succeeds when '.ufd' is finished processing)
 	  WinActivate($analyzerWindowName)
 	  Send('^r')
 	  Sleep(1 * 1000)
@@ -215,12 +213,6 @@ EndFunc
 
 ; generate a report for the given ufd
 Func GenerateReport($path)
-   $previousDirectoriesInOutput = _FileListToArray($outputDirectory, '*', $FLTA_FOLDERS)
-   $noPreviousDirectoriesInOutput = False
-   If @error Then
-	  $noPreviousDirectoriesInOutput = True
-   EndIf
-
    ; File name:
    Send('{TAB 3}')
    Replace(GetFileName($path))
@@ -266,56 +258,34 @@ Func GenerateReport($path)
    Send('{ENTER}')
 
    ; copy '.ufdr' file to final location
-   $currentDirectoriesInOutput = _FileListToArray($outputDirectory, '*', $FLTA_FOLDERS)
-   If Not @error Then
-	  Local $newDirectory = Null
-	  If $noPreviousDirectoriesInOutput Then
-		 $newDirectory = $currentDirectoriesInOutput[1]
-	  Else
-		 $newDirectory = FindNewDirectory($previousDirectoriesInOutput, $currentDirectoriesInOutput)
-	  EndIf
-	  If Not ($newDirectory = Null) Then
-		 $ufdrs = _FileListToArrayRec($outputDirectory & '\' & $newDirectory, '*.ufdr', $FLTAR_FILES, $FLTAR_RECUR)
-		 If Not @error Then
-			$copySrc = $outputDirectory & '\' & $newDirectory & '\' & $ufdrs[1]
-			$copyDst = $finalLocation & '\' & GetFileName($path) & '.ufdr'
-			FileCopy($copySrc, $copyDst, $FC_OVERWRITE)
-		 EndIf
-	  EndIf
-   EndIf
+   $ufdrPath = NewestUfdrFile($outputDirectory)
+   $copySrc = $outputDirectory & '\' & $ufdrPath
+   $copyDst = $finalLocation & '\' & GetFileName($path) & '.ufdr'
+   FileCopy($copySrc, $copyDst, $FC_OVERWRITE)
 
    ; log as processed
    _ArrayAdd($processedFiles, GetFileName($path))
    SaveFileLog($processedFiles, 'processed')
 EndFunc
 
+Func NewestUfdrFile($directory)
+   $ufdrs = _FileListToArrayRec($directory, '*.ufdr', $FLTAR_FILES, $FLTAR_RECUR)
+   $newestUfdrPath = $ufdrs[1]
+   $newestUfdrTimestamp = FileGetTime($directory & '\' & $newestUfdrPath, $FT_CREATED, $FT_STRING)
+   For $i = 2 To $ufdrs[0]
+	  $path = $ufdrs[$i]
+	  $timestamp = FileGetTime($directory & '\' & $path, $FT_CREATED, $FT_STRING)
+	  If StringCompare($timestamp, $newestUfdrTimestamp) > 0 Then
+		 $newestUfdrPath = $path
+		 $newestUfdrTimestamp = $timestamp
+	  EndIf
+   Next
+   return $newestUfdrPath
+EndFunc
+
 Func Replace($str)
    Send('^a')
    Send($str)
 EndFunc
-
-Func FindNewDirectory($previousDirs, $currentDirs)
-   For $curIndex = 1 To $currentDirs[0]
-	  $found = False
-	  For $prevIndex = 1 To $previousDirs[0]
-		 If $currentDirs[$curIndex] == $previousDirs[$prevIndex] Then
-			$found = True
-		 EndIf
-	  Next
-	  If Not $found Then
-		 Return $currentDirs[$curIndex]
-	  EndIf
-   Next
-   Return Null
-EndFunc
-
-;~ Func TestMain()
-;~    LoadConfig()
-
-;~    WinActivate($analyzerWindowName)
-;~    Send('^r')
-;~    Sleep(1 * 1000)
-;~    GenerateReport('Samsung GSM GT-I9250 Galaxy Nexus 2017_06_02 (001)\Physical ADB 01\Samsung GSM_GT-I9250 Galaxy Nexus.ufd')
-;~ EndFunc
 
 Main()
