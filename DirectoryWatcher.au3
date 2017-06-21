@@ -300,11 +300,4 @@ Func Replace($str)
    Send($str)
 EndFunc
 
-Func MainTest()
-   Local $array[2] = ['apple', 'banana']
-   ConsoleWrite('apple ' & ArrayContainsString($array, 'apple') & @CRLF)
-   ConsoleWrite('banana ' & ArrayContainsString($array, 'banana') & @CRLF)
-   ConsoleWrite('cherry ' & ArrayContainsString($array, 'cherry') & @CRLF)
-EndFunc
-
 Main()
