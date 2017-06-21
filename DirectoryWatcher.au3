@@ -82,18 +82,6 @@ Func ReadCommandLineArgs()
    Next
 EndFunc
 
-Func LoadFileLog($filename, $array)
-   $path = $inputDirectory & '\' & $filename
-   If FileExists($path) Then
-	  _FileReadToArray($path, $array, $FRTA_NOCOUNT)
-   EndIf
-EndFunc
-
-Func SaveFileLog($array, $filename)
-   $path = $inputDirectory & '\' & $filename
-   _FileWriteFromArray($path, $array)
-EndFunc
-
 Func NextNewFile()
    ; recursively search for '.ufd' files in the input directory
    $ufds = _FileListToArrayRec($inputDirectory, '*.ufd', $FLTAR_FILES, $FLTAR_RECUR)
@@ -102,12 +90,9 @@ Func NextNewFile()
 	  Return Null
    EndIf
 
-   Local $processedFiles[0]
-   LoadFileLog('processed', $processedFiles)
-   Local $failedFiles[0]
-   LoadFileLog('failed', $failedFiles)
-   Local $inProgressFiles[0]
-   LoadFileLog('inprogress', $inProgressFiles)
+   $processedFiles = LoadFileLog('processed')
+   $failedFiles = LoadFileLog('failed')
+   $inProgressFiles = LoadFileLog('inprogress')
    ; get the first '.ufd' file that hasn't been processed (or return Null if all have been processed)
    For $i = 1 To $ufds[0]
 	  $filename = GetFileName($ufds[$i])
@@ -132,7 +117,7 @@ Func ArrayIndexOfString($array, $string)
 EndFunc
 
 Func ProcessFile($path)
-   AddToInProgressFiles(GetFileName($path))
+   AddToLog('inprogress', GetFileName($path))
 
    ShellExecute($inputDirectory & '\' & $path)
 
@@ -154,16 +139,28 @@ Func ProcessFile($path)
    RemoveFromLog('inprogress', GetFileName($path))
 EndFunc
 
-Func AddToLog($log, $filename)
+Func LoadFileLog($filename)
+   $path = $inputDirectory & '\' & $filename
    Local $array[0]
-   LoadFileLog($log, $array)
-   _ArrayAdd($inProgressFiles, $filename)
+   If FileExists($path) Then
+	  _FileReadToArray($path, $array, $FRTA_NOCOUNT)
+   EndIf
+   Return $array
+EndFunc
+
+Func SaveFileLog($array, $filename)
+   $path = $inputDirectory & '\' & $filename
+   _FileWriteFromArray($path, $array)
+EndFunc
+
+Func AddToLog($log, $filename)
+   $array = LoadFileLog($log)
+   _ArrayAdd($array, $filename)
    SaveFileLog($array, $log)
 EndFunc
 
 Func RemoveFromLog($log, $filename)
-   Local $array[0]
-   LoadFileLog($log, $array)
+   $array = LoadFileLog($log)
    _ArrayDelete($array, ArrayIndexOfString($array, $filename))
    SaveFileLog($array, $log)
 EndFunc
@@ -301,6 +298,13 @@ EndFunc
 Func Replace($str)
    Send('^a')
    Send($str)
+EndFunc
+
+Func MainTest()
+   Local $array[2] = ['apple', 'banana']
+   ConsoleWrite('apple ' & ArrayContainsString($array, 'apple') & @CRLF)
+   ConsoleWrite('banana ' & ArrayContainsString($array, 'banana') & @CRLF)
+   ConsoleWrite('cherry ' & ArrayContainsString($array, 'cherry') & @CRLF)
 EndFunc
 
 Main()
