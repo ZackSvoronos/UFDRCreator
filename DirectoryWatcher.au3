@@ -19,6 +19,8 @@ Local $analyzerWindowName = 'UFED Physical Analyzer 6.2.0.79'
 ; list of '.ufd' files that have been successfully processed or failed to process (will not be retried)
 Local $processedFiles[0]
 Local $failedFiles[0]
+; list of '.ufd' files that are being proecessed by an instance of this script
+Local $inProgressFiles[0]
 
 Func Main()
    ; increase default key delay (miliseconds)
@@ -113,10 +115,11 @@ Func NextNewFile()
 	  Return Null
    EndIf
 
+   LoadFileLog('inprogress', $inProgressFiles)
    ; get the first '.ufd' file that hasn't been processed (or return Null if all have been processed)
    For $i = 1 To $ufds[0]
 	  $filename = GetFileName($ufds[$i])
-	  If (Not ArrayContainsString($processedFiles, $filename)) And (Not ArrayContainsString($failedFiles, $filename)) Then
+	  If (Not ArrayContainsString($processedFiles, $filename)) And (Not ArrayContainsString($failedFiles, $filename)) And (Not ArrayContainsString($inProgressFiles, $filename)) Then
 		 Return $ufds[$i]
 	  EndIf
    Next
@@ -124,15 +127,21 @@ Func NextNewFile()
 EndFunc
 
 Func ArrayContainsString($array, $string)
+   Return (ArrayIndexOfString($array, $string) <> -1)
+EndFunc
+
+Func ArrayIndexOfString($array, $string)
    For $i = 0 To (UBound($array)-1)
 	  If $array[$i] == $string Then
-		 Return True
+		 Return $i
 	  EndIf
    Next
-   Return False
+   Return -1
 EndFunc
 
 Func ProcessFile($path)
+   AddToInProgressFiles(GetFileName($path))
+
    ShellExecute($inputDirectory & '\' & $path)
 
    WaitForAnalyzerWindow()
@@ -149,6 +158,20 @@ Func ProcessFile($path)
 	  Send('{ENTER}')
 	  Sleep(1 * 1000)
    EndIf
+
+   RemoveFromInProgressFiles(GetFileName($path))
+EndFunc
+
+Func AddToInProgressFiles($filename)
+   LoadFileLog('inprogress', $inProgressFiles)
+   _ArrayAdd($inProgressFiles, $filename)
+   SaveFileLog($inProgressFiles, 'inprogress')
+EndFunc
+
+Func RemoveFromInProgressFiles($filename)
+   LoadFileLog('inprogress', $inProgressFiles)
+   _ArrayDelete($inProgressFiles, ArrayIndexOfString($filename))
+   SaveFileLog($inProgressFiles, 'inprogress')
 EndFunc
 
 Func WaitForAnalyzerWindow()
@@ -220,7 +243,7 @@ Func GenerateReport($path)
    Send('{TAB 2}{ENTER}')
    Sleep(1 * 1000)
    ControlClick('Select Folder', '', 1152)
-   Send($outputDirectory)
+   Replace($outputDirectory)
    Send('{TAB}')
    Send('{ENTER}')
    ; Project
@@ -288,4 +311,4 @@ Func Replace($str)
    Send($str)
 EndFunc
 
-Main()
+MainTest()
