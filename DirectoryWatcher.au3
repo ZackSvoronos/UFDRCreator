@@ -311,4 +311,4 @@ Func Replace($str)
    Send($str)
 EndFunc
 
-MainTest()
+Main()
