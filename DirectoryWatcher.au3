@@ -16,12 +16,6 @@ Local $examinerName = ''
 ; title of analyzer window (this is just an example, variable is set when program starts up)
 Local $analyzerWindowName = 'UFED Physical Analyzer 6.2.0.79'
 
-; list of '.ufd' files that have been successfully processed or failed to process (will not be retried)
-Local $processedFiles[0]
-Local $failedFiles[0]
-; list of '.ufd' files that are being proecessed by an instance of this script
-Local $inProgressFiles[0]
-
 Func Main()
    ; increase default key delay (miliseconds)
    AutoItSetOption('SendKeyDelay', 25)
@@ -35,8 +29,6 @@ Func Main()
    CheckDirIsValid($outputDirectory)
    CheckDirIsValid($finalLocation)
 
-   LoadFileLogs()
-
    ; look for new '.ufd' files in the input directory to process
    ; if none are found, wait and retry
    While True
@@ -44,7 +36,7 @@ Func Main()
 	  If Not ($newFile = Null) Then
 		 ProcessFile($newFile)
 	  Else
-		 Sleep(1 * 1000)
+		 Sleep(10 * 1000)
 	  EndIf
    WEnd
 EndFunc
@@ -90,11 +82,6 @@ Func ReadCommandLineArgs()
    Next
 EndFunc
 
-Func LoadFileLogs()
-   LoadFileLog('processed', $processedFiles)
-   LoadFileLog('failed', $failedFiles)
-EndFunc
-
 Func LoadFileLog($filename, $array)
    $path = $inputDirectory & '\' & $filename
    If FileExists($path) Then
@@ -115,6 +102,11 @@ Func NextNewFile()
 	  Return Null
    EndIf
 
+   Local $processedFiles[0]
+   LoadFileLog('processed', $processedFiles)
+   Local $failedFiles[0]
+   LoadFileLog('failed', $failedFiles)
+   Local $inProgressFiles[0]
    LoadFileLog('inprogress', $inProgressFiles)
    ; get the first '.ufd' file that hasn't been processed (or return Null if all have been processed)
    For $i = 1 To $ufds[0]
@@ -159,19 +151,21 @@ Func ProcessFile($path)
 	  Sleep(1 * 1000)
    EndIf
 
-   RemoveFromInProgressFiles(GetFileName($path))
+   RemoveFromLog('inprogress', GetFileName($path))
 EndFunc
 
-Func AddToInProgressFiles($filename)
-   LoadFileLog('inprogress', $inProgressFiles)
+Func AddToLog($log, $filename)
+   Local $array[0]
+   LoadFileLog($log, $array)
    _ArrayAdd($inProgressFiles, $filename)
-   SaveFileLog($inProgressFiles, 'inprogress')
+   SaveFileLog($array, $log)
 EndFunc
 
-Func RemoveFromInProgressFiles($filename)
-   LoadFileLog('inprogress', $inProgressFiles)
-   _ArrayDelete($inProgressFiles, ArrayIndexOfString($filename))
-   SaveFileLog($inProgressFiles, 'inprogress')
+Func RemoveFromLog($log, $filename)
+   Local $array[0]
+   LoadFileLog($log, $array)
+   _ArrayDelete($array, ArrayIndexOfString($array, $filename))
+   SaveFileLog($array, $log)
 EndFunc
 
 Func WaitForAnalyzerWindow()
@@ -270,8 +264,7 @@ Func GenerateReport($path)
    If WinExists('Generate Report') Then
 	  WinClose('Generate Report')
 	  ; log as failed
-	  _ArrayAdd($failedFiles, GetFileName($path))
-	  SaveFileLog($failedFiles, 'failed')
+	  AddToLog('failed', GetFileName($path))
 	  Return
    EndIf
    ; wait for report to run
@@ -287,8 +280,7 @@ Func GenerateReport($path)
    FileCopy($copySrc, $copyDst, $FC_OVERWRITE)
 
    ; log as processed
-   _ArrayAdd($processedFiles, GetFileName($path))
-   SaveFileLog($processedFiles, 'processed')
+   AddToLog('processed', GetFileName($path))
 EndFunc
 
 Func NewestUfdrFile($directory)
