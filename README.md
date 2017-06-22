@@ -11,7 +11,9 @@
 
 Command line arguments are optional and override the values in `config`.
 
-Successful extractions are recorded in the `processed` file, created in the input directory. Failed extractions are recorded in the `failed` file.
+Successful extractions are recorded in the `processed` file, created in the input directory.
+Failed extractions are recorded in the `failed` file.
+Extractions currently running are recorded in the `inprogress` file.
 
 ## Dependencies:
 UFED Physical Analyzer must be installed and '.ufd' files must be associated with it.
