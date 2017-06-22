@@ -5,7 +5,7 @@
 #include <Array.au3>
 #include <File.au3>
 
-Local $popups[5] = ['New version is available', 'Did you know…', 'Recover additional location data: Time-limited free service', 'Device time zone detected', 'Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service']
+Local $popups[6] = ['[CLASS:#32770]', 'New version is available', 'Did you know…', 'Recover additional location data: Time-limited free service', 'Device time zone detected', 'Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service']
 
 ; these are read from the config file or overwritten by command line arguments
 Local $inputDirectory = ''
@@ -150,7 +150,12 @@ EndFunc
 
 Func SaveFileLog($array, $filename)
    $path = $inputDirectory & '\' & $filename
-   _FileWriteFromArray($path, $array)
+   If UBound($array) = 0 Then
+	  ; _FileWriteFromArray does nothing if the array is empty, so delete the file (easier than creating a new file handle and overwriting the file with an empty one)
+	  FileDelete($path)
+   Else
+	  _FileWriteFromArray($path, $array)
+   EndIf
 EndFunc
 
 Func AddToLog($log, $filename)
@@ -172,19 +177,18 @@ Func WaitForAnalyzerWindow()
 	  For $i = 1 To $windows[0][0]
 		 If StringInStr($windows[$i][0], 'UFED Physical Analyzer') Then
 			$analyzerWindowName = $windows[$i][0]
-			Sleep(10 * 1000)
-			return
+			Return
 		 EndIf
 	  Next
 
-	  Sleep(10 * 1000)
+	  Sleep(1 * 1000)
    WEnd
 EndFunc
 
 Func CloseAllPopups()
    While PopupsExist()
 	  ClosePopups()
-	  Sleep(1000)
+	  Sleep(1 * 1000)
    Wend
 EndFunc
 
@@ -227,6 +231,8 @@ EndFunc
 
 ; generate a report for the given ufd
 Func GenerateReport($path)
+   CloseAllPopups()
+   WinActivate('Generate Report')
    ; File name:
    Send('{TAB 3}')
    Replace(GetFileName($path))
