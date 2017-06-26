@@ -4,6 +4,7 @@
 #include <ColorConstants.au3>
 #include <Array.au3>
 #include <File.au3>
+#include <WinAPI.au3>
 
 Local $popups[6] = ['[CLASS:#32770]', 'New version is available', 'Did you know…', 'Recover additional location data: Time-limited free service', 'Device time zone detected', 'Convert BSSID (wireless networks) and cell towers to locations: Time-limited free service']
 
@@ -125,16 +126,16 @@ Func ProcessFile($path)
 
    WaitUntilFinished()
 
+   ; if UFED Physical Analyzer closed while waiting for the extraction to finish, mark it as failed and move on (should only happen if program is manually closed)
+   If Not WinExists($analyzerWindowName) Then
+	  AddToLog('failed', GetFileName($path))
+	  RemoveFromLog('inprogress', GetFileName($path))
+	  Return
+   EndIf
+
    GenerateReport($path)
 
-   ; close UFED Physical Analyzer
-   WinActivate($analyzerWindowName)
-   WinClose($analyzerWindowName)
-   Sleep(1 * 1000)
-   If WinExists('Warning') Then
-	  Send('{ENTER}')
-	  Sleep(1 * 1000)
-   EndIf
+   CloseAnalyzer()
 
    RemoveFromLog('inprogress', GetFileName($path))
 EndFunc
@@ -175,7 +176,8 @@ Func WaitForAnalyzerWindow()
 	  $windows = WinList()
 
 	  For $i = 1 To $windows[0][0]
-		 If StringInStr($windows[$i][0], 'UFED Physical Analyzer') Then
+		 ; find the first window with 'UFED Physical Analyzer' in the title and 'UFEDPhysicalAnalyzer.exe' in the handle class name (e.g. "HwndWrapper[UFEDPhysicalAnalyzer.exe;;a343e3b1-a32b-4e01-8da4-5379e002e962]")
+		 If StringInStr($windows[$i][0], 'UFED Physical Analyzer') And StringInStr(_WinAPI_GetClassName($windows[$i][1]), 'UFEDPhysicalAnalyzer.exe') Then
 			$analyzerWindowName = $windows[$i][0]
 			Return
 		 EndIf
@@ -213,6 +215,10 @@ Func WaitUntilFinished()
    While Not (WinExists('Generate Report'))
 	  Sleep(9 * 1000)
 	  CloseAllPopups()
+	  ; check if the program has been closed, and if so, stop waiting (should only happen if program is manually closed)
+	  If Not WinExists($analyzerWindowName) Then
+		 Return
+	  EndIf
 	  ; try to generate a report (only succeeds when '.ufd' is finished processing)
 	  WinActivate($analyzerWindowName)
 	  Send('^r')
@@ -256,10 +262,10 @@ Func GenerateReport($path)
    ; Examiner Name
    MouseClick('left', $winX + 600, $winY + 390, 1, 0)
    Send($examinerName)
-   Sleep(1000)
+   Sleep(1 * 1000)
    ; click Next
    MouseClick('left', $winX + $winWidth - 300, $winY + $winHeight - 30, 1, 0)
-   Sleep(1000)
+   Sleep(1 * 1000)
    ; click Finish
    MouseClick('left', $winX + $winWidth - 180, $winY + $winHeight - 30, 1, 0)
    ; if 'Generated report' window doesn't close, then 'Finish' button didn't work, so extraction failed
@@ -304,6 +310,20 @@ EndFunc
 Func Replace($str)
    Send('^a')
    Send($str)
+EndFunc
+
+Func CloseAnalyzer()
+   WinActivate($analyzerWindowName)
+   WinClose($analyzerWindowName)
+   Sleep(1 * 1000)
+   If WinExists('Warning') Then
+	  Send('{ENTER}')
+	  Sleep(1 * 1000)
+   EndIf
+   ; make sure UFED Physical Analyzer exited cleanly
+   Do
+	  Sleep(5 * 1000)
+   Until Not WinExists($analyzerWindowName)
 EndFunc
 
 Main()
